@@ -1,7 +1,6 @@
 import os
 import openai
 import logging
-import time
 import backoff
 from pathlib import Path
 from textwrap import dedent
@@ -32,10 +31,10 @@ def chunk_story(story, max_words=4000):
         chunks.append("\n\n".join(current_chunk))
     return chunks
 
-def get_ideal_prompt(character_name, story_name, background):
+def get_ideal_prompt(old_name, new_name, story_name, background):
     return dedent(f"""
         You are a creative writer tasked with rewriting the story "{story_name}".
-        Replace the main character with "{character_name}", who has the following background: {background}.
+        Replace the original protagonist "{old_name}" with a new character named "{new_name}", who has the following background: {background}.
         Ensure to reflect their unique personality, cultural nuances, and perspective while retaining the original story's core plot.
         Make the character seamlessly fit into the story, preserving its fantastical or real-world elements.
     """)
@@ -65,9 +64,9 @@ def rewrite_chunk_with_ai(chunk, prompt):
             return "\n\n".join(rewritten_parts)
         raise
 
-def process_story(file_path, character_name, background):
-    if not character_name.strip() or not background.strip():
-        raise ValueError("Character name and background cannot be empty")
+def process_story(file_path, old_name, new_name, background):
+    if not old_name.strip() or not new_name.strip() or not background.strip():
+        raise ValueError("Names and background cannot be empty")
     
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Story file not found: {file_path}")
@@ -79,7 +78,7 @@ def process_story(file_path, character_name, background):
         raise RuntimeError(f"Error reading the story file: {e}")
 
     story_name = Path(file_path).stem
-    prompt = get_ideal_prompt(character_name, story_name, background)
+    prompt = get_ideal_prompt(old_name, new_name, story_name, background)
     chunks = chunk_story(text)
     
     rewritten_chunks = []
@@ -100,12 +99,13 @@ def main():
         logger.error("Error: File not found. Please enter a valid file path.")
         return
 
-    character_name = input("Enter the name of the new protagonist: ").strip()
-    background = input(f"Describe the background for {character_name}: ").strip()
+    old_name = input("Enter the name of the original protagonist: ").strip()
+    new_name = input("Enter the new name of the protagonist: ").strip()
+    background = input(f"Describe the background for {new_name}: ").strip()
 
     logger.info("Processing your story... This might take a few minutes.")
     try:
-        rewritten_story = process_story(story_path, character_name, background)
+        rewritten_story = process_story(story_path, old_name, new_name, background)
         output_path = Path(story_path).with_suffix(".rewritten.txt")
         with open(output_path, "w", encoding="utf-8") as output_file:
             output_file.write(rewritten_story)
